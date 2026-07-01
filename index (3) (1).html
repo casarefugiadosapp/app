@@ -1,0 +1,852 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<meta name="theme-color" content="#0E5E5A" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+<meta name="apple-mobile-web-app-title" content="Casa Refugiados" />
+<link rel="manifest" href="manifest.json" />
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png" />
+<link rel="apple-touch-icon" href="apple-touch-icon.png" />
+<title>Casa Refugiados — Información y apoyo</title>
+
+<!--
+=====================================================================
+  GUÍA RÁPIDA PARA EDITAR ESTA APLICACIÓN
+=====================================================================
+  1) HORARIO DE LA CASITA  →  se edita en Google Sheets, NO aquí.
+     Sigue las instrucciones en la constante SHEET_CSV_URL (abajo).
+
+  2) TEXTOS (legal, vivienda, salud, etc.)  →  se editan en el
+     objeto CONTENIDO (abajo, en <script>). Cada texto tiene cuatro
+     idiomas: es (español), en (inglés), fr (francés), ht (kreyòl).
+
+  Los textos con  [ POR CONFIRMAR ]  son provisionales. Reemplázalos
+  con información verificada por Casa Refugiados antes de publicar.
+  Las traducciones (sobre todo fr y ht) deben revisarse con un
+  hablante nativo antes de publicar.
+=====================================================================
+-->
+
+<style>
+  :root {
+    --brand:#0E5E5A; --brand-deep:#0A3D3B; --brand-soft:#E3EDEC;
+    --bg:#F4F2EC; --card:#FFFFFF; --line:#E4E0D6;
+    --ink:#1B2522; --ink-soft:#586460; --ink-faint:#8A938F;
+    --legal:#4E6478; --legal-soft:#E7ECF0;
+    --vivienda:#BC6B4C; --vivienda-soft:#F4E6DF;
+    --comunidad:#C98A3A; --comunidad-soft:#F6ECD9;
+    --salud:#5C8A6B; --salud-soft:#E5EFE8;
+    --orientacion:#6B6597; --orientacion-soft:#EAE9F1;
+    --accent:#E8943C;
+    --radius:18px; --radius-sm:12px;
+    --shadow:0 1px 2px rgba(27,37,34,.05),0 8px 24px rgba(27,37,34,.06);
+    --shadow-press:0 1px 2px rgba(27,37,34,.08);
+    --font:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0;}
+  body{font-family:var(--font);background:var(--bg);color:var(--ink);line-height:1.5;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;}
+
+  .app{max-width:480px;margin:0 auto;min-height:100vh;min-height:100dvh;background:var(--bg);display:flex;flex-direction:column;position:relative;box-shadow:0 0 60px rgba(27,37,34,.07);}
+
+  .topbar{background:linear-gradient(160deg,var(--brand) 0%,var(--brand-deep) 100%);color:#fff;padding:calc(env(safe-area-inset-top) + 18px) 20px 18px;position:sticky;top:0;z-index:20;}
+  .topbar-row{display:flex;align-items:center;justify-content:space-between;gap:12px;}
+  .brand-name{font-size:1.15rem;font-weight:700;letter-spacing:-.01em;display:flex;align-items:center;gap:9px;}
+  .brand-mark{width:34px;height:34px;border-radius:9px;background:#fff;display:grid;place-items:center;flex:none;overflow:hidden;}
+  .brand-mark img{width:30px;height:30px;object-fit:contain;}
+  .topbar-actions{display:flex;align-items:center;gap:8px;}
+  .pill{font-size:.72rem;font-weight:700;letter-spacing:.04em;background:rgba(255,255,255,.18);color:#fff;border:none;border-radius:999px;padding:6px 11px;cursor:pointer;display:inline-flex;align-items:center;gap:5px;font-family:var(--font);}
+  .pill:focus-visible{outline:2px solid #fff;outline-offset:2px;}
+  .icon-btn{width:38px;height:38px;border-radius:11px;border:none;background:rgba(255,255,255,.16);color:#fff;cursor:pointer;display:grid;place-items:center;}
+  .icon-btn:focus-visible{outline:2px solid #fff;outline-offset:2px;}
+  .tagline{margin-top:6px;font-size:.9rem;color:rgba(255,255,255,.82);}
+
+  .lang-menu{position:absolute;top:calc(env(safe-area-inset-top) + 58px);right:18px;background:#fff;border-radius:14px;box-shadow:0 12px 40px rgba(27,37,34,.22);overflow:hidden;z-index:40;display:none;min-width:190px;border:1px solid var(--line);}
+  .lang-menu.open{display:block;animation:rise .16s ease both;}
+  .lang-menu button{display:flex;width:100%;gap:10px;align-items:center;padding:13px 16px;border:none;background:none;font-family:var(--font);font-size:.98rem;cursor:pointer;text-align:left;color:var(--ink);border-top:1px solid var(--line);}
+  .lang-menu button:first-child{border-top:none;}
+  .lang-menu button:hover{background:var(--bg);}
+  .lang-menu button[aria-current="true"]{font-weight:700;color:var(--brand);}
+  .lang-menu .tick{margin-left:auto;color:var(--brand);}
+
+  .view{flex:1;padding:22px 18px 28px;animation:rise .28s ease both;}
+  @keyframes rise{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:none;}}
+  @media (prefers-reduced-motion:reduce){.view,.lang-menu.open{animation:none;}*{transition:none !important;}}
+
+  .home-logo{display:block;width:138px;max-width:55%;height:auto;margin:6px auto 14px;}
+  .greeting{font-size:1.42rem;font-weight:700;letter-spacing:-.02em;line-height:1.25;margin:4px 2px;}
+  .subgreeting{color:var(--ink-soft);margin:0 2px 18px;font-size:.96rem;}
+
+  .cards{display:grid;gap:13px;}
+  .card{display:flex;align-items:center;gap:15px;width:100%;text-align:left;background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:16px;cursor:pointer;box-shadow:var(--shadow);transition:transform .12s ease,box-shadow .12s ease;color:var(--ink);position:relative;overflow:hidden;font-family:var(--font);text-decoration:none;}
+  .card:active{transform:scale(.985);box-shadow:var(--shadow-press);}
+  .card:focus-visible{outline:3px solid var(--brand);outline-offset:2px;}
+  .card-bar{position:absolute;left:0;top:0;bottom:0;width:5px;}
+  .card-icon{width:52px;height:52px;border-radius:14px;display:grid;place-items:center;flex:none;}
+  .card-icon svg{width:27px;height:27px;}
+  .card-text{flex:1;min-width:0;}
+  .card-title{display:block;font-weight:700;font-size:1.08rem;letter-spacing:-.01em;line-height:1.3;}
+  .card-desc{display:block;color:var(--ink-soft);font-size:.87rem;line-height:1.4;margin-top:3px;}
+  .card-chev{color:var(--ink-faint);flex:none;}
+
+  .back{display:inline-flex;align-items:center;gap:6px;background:none;border:none;color:var(--ink-soft);font-size:.95rem;font-weight:600;cursor:pointer;padding:4px 2px;margin:-2px 0 14px -2px;font-family:var(--font);}
+  .back:focus-visible{outline:2px solid var(--brand);outline-offset:2px;border-radius:6px;}
+
+  .section-head{display:flex;align-items:center;gap:13px;margin-bottom:6px;}
+  .section-badge{width:48px;height:48px;border-radius:13px;display:grid;place-items:center;flex:none;}
+  .section-badge svg{width:25px;height:25px;}
+  .section-title{font-size:1.5rem;font-weight:700;letter-spacing:-.02em;line-height:1.15;}
+  .section-intro{color:var(--ink-soft);font-size:.97rem;margin:12px 2px 20px;}
+
+  .block{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:17px 16px;margin-bottom:13px;box-shadow:var(--shadow);}
+  .block-label{font-size:.74rem;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--ink-faint);margin-bottom:9px;}
+  .block h3{margin:0 0 7px;font-size:1.06rem;letter-spacing:-.01em;}
+  .block p{margin:0 0 8px;color:var(--ink-soft);font-size:.95rem;}
+  .block p:last-child{margin-bottom:0;}
+
+  .steps{list-style:none;counter-reset:s;padding:0;margin:4px 0 0;}
+  .steps li{counter-increment:s;display:flex;gap:12px;padding:9px 0;border-top:1px solid var(--line);align-items:flex-start;}
+  .steps li:first-child{border-top:none;}
+  .steps li::before{content:counter(s);flex:none;width:26px;height:26px;border-radius:50%;background:var(--seccolor,var(--brand));color:#fff;font-size:.82rem;font-weight:700;display:grid;place-items:center;margin-top:1px;}
+  .steps li span{font-size:.95rem;color:var(--ink);padding-top:2px;}
+
+  .todo{display:inline-block;font-size:.72rem;font-weight:800;letter-spacing:.04em;color:#9A5B00;background:#FBEFD6;border:1px dashed #E0B25C;border-radius:6px;padding:2px 7px;margin-bottom:6px;}
+
+  .contact-row{display:flex;align-items:center;gap:12px;padding:12px 0;border-top:1px solid var(--line);}
+  .contact-row:first-of-type{border-top:none;}
+  .contact-ico{width:38px;height:38px;border-radius:11px;background:var(--brand-soft);color:var(--brand);display:grid;place-items:center;flex:none;}
+  .contact-ico svg{width:19px;height:19px;}
+  .contact-meta{flex:1;min-width:0;}
+  .contact-meta .k{display:block;font-size:.78rem;color:var(--ink-faint);margin-bottom:2px;}
+  .contact-meta .v{display:block;font-weight:600;font-size:.96rem;line-height:1.4;}
+
+  .sched-status{display:flex;align-items:center;justify-content:center;gap:7px;font-size:.8rem;color:var(--ink-faint);margin:0 0 14px;}
+  .sched-status .d{width:8px;height:8px;border-radius:50%;flex:none;}
+  .sched-status.live .d{background:var(--salud);}
+  .sched-status.cached .d{background:var(--accent);}
+  .sched-status.loading .d{background:var(--ink-faint);animation:pulse 1s infinite;}
+  @keyframes pulse{0%,100%{opacity:.3;}50%{opacity:1;}}
+
+  .day{background:var(--card);border:1px solid var(--line);border-radius:var(--radius-sm);margin-bottom:11px;overflow:hidden;box-shadow:var(--shadow);}
+  .day-head{background:var(--comunidad-soft);color:#7A521A;font-weight:800;font-size:.82rem;letter-spacing:.06em;text-transform:uppercase;padding:9px 14px;}
+  .day-empty{padding:12px 14px;color:var(--ink-faint);font-size:.9rem;font-style:italic;}
+  .slot{display:flex;gap:13px;padding:11px 14px;border-top:1px solid var(--line);}
+  .slot:first-of-type{border-top:none;}
+  .slot-time{font-weight:700;font-size:.86rem;color:var(--comunidad);white-space:nowrap;padding-top:1px;min-width:60px;}
+  .slot-body{display:flex;flex-direction:column;}
+  .slot-body .t{font-weight:600;font-size:.96rem;line-height:1.3;}
+  .slot-body .p{font-size:.85rem;color:var(--ink-soft);line-height:1.35;margin-top:2px;}
+  .updated-note{font-size:.82rem;color:var(--ink-faint);text-align:center;margin:4px 0 0;}
+
+  .privacy{margin:8px 2px 0;display:flex;gap:10px;align-items:flex-start;background:var(--brand-soft);border-radius:var(--radius-sm);padding:13px 14px;}
+  .privacy svg{width:20px;height:20px;color:var(--brand);flex:none;margin-top:1px;}
+  .privacy p{margin:0;font-size:.85rem;color:var(--brand-deep);line-height:1.45;}
+
+  .scrim{position:fixed;inset:0;background:rgba(15,25,23,.45);display:none;align-items:flex-end;justify-content:center;z-index:50;}
+  .scrim.open{display:flex;}
+  .sheet{background:var(--card);width:100%;max-width:480px;border-radius:22px 22px 0 0;padding:20px 18px calc(env(safe-area-inset-bottom) + 22px);animation:sheetUp .26s ease both;}
+  @keyframes sheetUp{from{transform:translateY(100%);}to{transform:none;}}
+  .sheet h3{margin:0 0 4px;font-size:1.2rem;}
+  .sheet>p{margin:0 0 16px;color:var(--ink-soft);font-size:.92rem;}
+  .call-btn{display:flex;align-items:center;gap:13px;width:100%;text-decoration:none;background:var(--bg);border:1px solid var(--line);border-radius:var(--radius-sm);padding:14px;margin-bottom:10px;color:var(--ink);font-family:var(--font);}
+  .call-btn .ic{width:42px;height:42px;border-radius:11px;display:grid;place-items:center;flex:none;color:#fff;}
+  .call-btn .lab .k{display:block;font-size:.8rem;color:var(--ink-faint);margin-bottom:1px;}
+  .call-btn .lab .v{display:block;font-weight:700;font-size:1.05rem;}
+  .sheet-close{width:100%;background:var(--brand);color:#fff;border:none;border-radius:var(--radius-sm);padding:13px;font-weight:700;font-size:1rem;cursor:pointer;margin-top:4px;font-family:var(--font);}
+
+  .footer{text-align:center;font-size:.76rem;color:var(--ink-faint);padding:18px 18px 6px;}
+  .offline-dot{display:inline-flex;align-items:center;gap:6px;}
+  .offline-dot::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--salud);}
+
+  /* ---------- Right-to-left (árabe) ---------- */
+  [dir="rtl"] .card-bar{left:auto;right:0;}
+  [dir="rtl"] .lang-menu{right:auto;left:18px;}
+  [dir="rtl"] .card-chev svg,[dir="rtl"] .back svg{transform:scaleX(-1);}
+  [dir="rtl"] .back{margin-left:0;margin-right:-2px;}
+  [dir="rtl"] .pill{flex-direction:row-reverse;}
+
+  /* ---------- Asistente ---------- */
+  .fab{position:fixed;bottom:20px;right:max(18px,calc(50% - 240px + 18px));z-index:45;width:58px;height:58px;border-radius:50%;border:none;background:linear-gradient(160deg,var(--brand),var(--brand-deep));color:#fff;box-shadow:0 6px 20px rgba(10,61,59,.4);cursor:pointer;display:grid;place-items:center;transition:transform .12s ease;}
+  .fab:active{transform:scale(.92);}
+  .fab:focus-visible{outline:3px solid var(--brand);outline-offset:3px;}
+  [dir="rtl"] .fab{right:auto;left:max(18px,calc(50% - 240px + 18px));}
+
+  .assist-scrim{position:fixed;inset:0;background:rgba(15,25,23,.45);display:none;align-items:flex-end;justify-content:center;z-index:60;}
+  .assist-scrim.open{display:flex;}
+  .assist-panel{background:var(--bg);width:100%;max-width:480px;height:90vh;height:90dvh;border-radius:22px 22px 0 0;display:flex;flex-direction:column;overflow:hidden;animation:sheetUp .26s ease both;}
+  .assist-head{background:linear-gradient(160deg,var(--brand),var(--brand-deep));color:#fff;padding:calc(env(safe-area-inset-top) + 14px) 18px 14px;display:flex;align-items:center;gap:11px;flex:none;}
+  .assist-ico{width:34px;height:34px;border-radius:10px;background:rgba(255,255,255,.16);display:grid;place-items:center;flex:none;}
+  .assist-ico svg{width:19px;height:19px;}
+  .assist-head .ttl{font-weight:700;font-size:1.08rem;flex:1;}
+  .assist-close{width:36px;height:36px;border-radius:10px;border:none;background:rgba(255,255,255,.16);color:#fff;cursor:pointer;display:grid;place-items:center;flex:none;}
+  .assist-close svg{width:19px;height:19px;}
+  .assist-disc{font-size:.8rem;color:var(--brand-deep);background:var(--brand-soft);padding:11px 16px;line-height:1.4;flex:none;}
+  .assist-msgs{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:11px;}
+  .msg{max-width:86%;padding:11px 14px;border-radius:16px;font-size:.95rem;line-height:1.45;}
+  .msg.user{align-self:flex-end;background:var(--brand);color:#fff;border-bottom-right-radius:5px;}
+  .msg.bot{align-self:flex-start;background:var(--card);border:1px solid var(--line);color:var(--ink);border-bottom-left-radius:5px;}
+  .assist-result{display:flex;align-items:center;gap:11px;width:100%;text-align:left;background:var(--card);border:1px solid var(--line);border-radius:13px;padding:11px 12px;margin-top:9px;cursor:pointer;font-family:var(--font);color:var(--ink);box-shadow:var(--shadow);}
+  .assist-result:active{transform:scale(.99);}
+  .assist-result .ri{width:38px;height:38px;border-radius:10px;display:grid;place-items:center;flex:none;}
+  .assist-result .ri svg{width:20px;height:20px;}
+  .assist-result .rt{flex:1;min-width:0;font-weight:600;font-size:.95rem;}
+  .assist-result .ro{font-size:.8rem;font-weight:700;color:var(--brand);flex:none;}
+  .chips{display:flex;flex-wrap:wrap;gap:8px;padding:0 14px 10px;flex:none;}
+  .chip{background:var(--card);border:1px solid var(--line);border-radius:999px;padding:8px 13px;font-size:.85rem;cursor:pointer;color:var(--ink);font-family:var(--font);}
+  .chip:active{background:var(--bg);}
+  .assist-input{display:flex;gap:8px;padding:12px;padding-bottom:calc(env(safe-area-inset-bottom) + 12px);border-top:1px solid var(--line);background:var(--bg);flex:none;}
+  .assist-input input{flex:1;border:1px solid var(--line);border-radius:999px;padding:12px 16px;font-size:.95rem;font-family:var(--font);background:#fff;color:var(--ink);min-width:0;}
+  .assist-input input:focus{outline:none;border-color:var(--brand);}
+  .assist-send{width:46px;height:46px;border-radius:50%;border:none;background:var(--brand);color:#fff;cursor:pointer;display:grid;place-items:center;flex:none;}
+  .assist-send svg{width:21px;height:21px;}
+  [dir="rtl"] .msg.user{border-bottom-right-radius:16px;border-bottom-left-radius:5px;}
+  [dir="rtl"] .msg.bot{border-bottom-left-radius:16px;border-bottom-right-radius:5px;}
+  [dir="rtl"] .assist-result,[dir="rtl"] .assist-input input{text-align:right;}
+  [dir="rtl"] .assist-send svg{transform:scaleX(-1);}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <header class="topbar">
+    <div class="topbar-row">
+      <div class="brand-name">
+        <span class="brand-mark" aria-hidden="true">
+          <img src="logo-emblem.png" alt="" />
+        </span>
+        Casa Refugiados
+      </div>
+      <div class="topbar-actions">
+        <button class="pill" id="langBtn" aria-haspopup="true" aria-expanded="false" aria-label="Cambiar idioma / Change language"><span id="langCode">ES</span> ▾</button>
+        <button class="icon-btn" id="helpBtn" aria-label="Contacto y emergencias">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="19" height="19"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.81.36 1.6.7 2.34a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.74-1.27a2 2 0 0 1 2.11-.45c.74.34 1.53.57 2.34.7A2 2 0 0 1 22 16.92z"/></svg>
+        </button>
+      </div>
+    </div>
+    <div class="tagline" id="tagline"></div>
+  </header>
+
+  <nav class="lang-menu" id="langMenu" role="menu" aria-label="Idiomas"></nav>
+  <main id="view" class="view" aria-live="polite"></main>
+
+  <button class="fab" id="fab" aria-label="Asistente">
+    <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="24" height="24"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+  </button>
+</div>
+
+<div class="scrim" id="scrim">
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle" id="sheet"></div>
+</div>
+
+<div class="assist-scrim" id="assistScrim">
+  <div class="assist-panel" role="dialog" aria-modal="true" aria-label="Asistente">
+    <div class="assist-head">
+      <span class="assist-ico" id="assistIco"></span>
+      <span class="ttl" id="assistTitle"></span>
+      <button class="assist-close" id="assistClose" aria-label="Cerrar"></button>
+    </div>
+    <div class="assist-disc" id="assistDisc"></div>
+    <div class="assist-msgs" id="assistMsgs"></div>
+    <div class="chips" id="assistChips"></div>
+    <div class="assist-input">
+      <input id="assistField" type="text" autocomplete="off" />
+      <button class="assist-send" id="assistSend"></button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* =====================================================================
+   CONEXIÓN CON GOOGLE SHEETS (horario de La Casita)
+   ---------------------------------------------------------------------
+   1. Crea una hoja de cálculo con esta primera fila (encabezados):
+        dia | hora | actividad_es | actividad_en | actividad_fr | actividad_ht | actividad_ar | lugar
+      - dia: número 1 a 7 (1 = lunes) o el nombre del día en español.
+      - hora: por ejemplo  10:00
+      - actividad_es es obligatoria. Las demás son opcionales: si están
+        vacías, se mostrará el español.
+      - lugar: opcional (por ejemplo "Salón principal").
+   2. En Google Sheets:  Archivo → Compartir → Publicar en la web
+      → elige la hoja → formato CSV → Publicar → copia el enlace.
+   3. Pega ese enlace aquí abajo, entre las comillas.
+      Mientras esté vacío, la app usa el horario de respaldo incluido.
+   ===================================================================== */
+const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTwKzOjhHJUuBW2Z_R2Bbg8sH8HkKzAgIcX6MhrySvS6tJbsnX0MofKusxktOLIIKJtfkV9K1KWzmYm/pub?gid=0&single=true&output=csv";
+
+/* =====================================================================
+   CONTENIDO (textos en 4 idiomas: es, en, fr, ht)
+   ===================================================================== */
+const UI = {
+  tagline:{es:"Información y apoyo para tu camino",en:"Information and support for your journey",fr:"Information et soutien pour ton parcours",ht:"Enfòmasyon ak sipò pou wout ou",ar:"معلومات ودعم في رحلتك"},
+  saludo:{es:"¿En qué podemos acompañarte hoy?",en:"How can we support you today?",fr:"Comment pouvons-nous t'accompagner aujourd'hui ?",ht:"Kijan nou ka akonpaye ou jodi a?",ar:"كيف يمكننا مساعدتك اليوم؟"},
+  sub:{es:"Elige un tema para ver la información y cómo solicitar apoyo.",en:"Choose a topic to see the information and how to request support.",fr:"Choisis un sujet pour voir les informations et comment demander de l'aide.",ht:"Chwazi yon sijè pou wè enfòmasyon yo ak kijan pou mande sipò.",ar:"اختر موضوعًا لعرض المعلومات وكيفية طلب الدعم."},
+  home:{es:"Inicio",en:"Home",fr:"Accueil",ht:"Akèy",ar:"الرئيسية"},
+  comoAcceder:{es:"Cómo acceder",en:"How to access",fr:"Comment y accéder",ht:"Kijan pou jwenn li",ar:"كيفية الوصول"},
+  contacto:{es:"Contacto",en:"Contact",fr:"Contact",ht:"Kontak",ar:"معلومات الاتصال"},
+  queOfrece:{es:"Qué ofrece",en:"What it offers",fr:"Ce qui est offert",ht:"Sa li ofri",ar:"ما الذي يقدمه"},
+  queEs:{es:"Qué es",en:"What it is",fr:"Ce que c'est",ht:"Sa li ye",ar:"ما هو"},
+  privacy:{es:"Esta aplicación es anónima. No te pedimos ningún dato ni guardamos información sobre ti.",en:"This app is anonymous. We don't ask for any of your information and we don't store anything about you.",fr:"Cette application est anonyme. Nous ne demandons aucune donnée et ne conservons aucune information sur toi.",ht:"Aplikasyon sa a anonim. Nou pa mande okenn enfòmasyon sou ou e nou pa sere anyen sou ou.",ar:"هذا التطبيق مجهول الهوية. لا نطلب أي معلومات عنك ولا نحتفظ بأي بيانات خاصة بك."},
+  offline:{es:"Funciona sin conexión a internet",en:"Works without an internet connection",fr:"Fonctionne sans connexion internet",ht:"Li travay san koneksyon entènèt",ar:"يعمل بدون اتصال بالإنترنت"},
+  noActivities:{es:"Sin actividades programadas",en:"No activities scheduled",fr:"Aucune activité prévue",ht:"Pa gen aktivite pwograme",ar:"لا توجد أنشطة مجدولة"},
+  scheduleNote:{es:"Horario actualizado por el equipo de La Casita.",en:"Schedule updated by the La Casita team.",fr:"Horaire mis à jour par l'équipe de La Casita.",ht:"Orè a mete ajou pa ekip La Casita.",ar:"يُحدَّث الجدول من قبل فريق La Casita."},
+  statusLive:{es:"Horario actualizado en vivo",en:"Schedule updated live",fr:"Horaire mis à jour en direct",ht:"Orè mete ajou an dirèk",ar:"الجدول مُحدَّث مباشرةً"},
+  statusCached:{es:"Mostrando el horario guardado",en:"Showing the saved schedule",fr:"Affichage de l'horaire enregistré",ht:"Ap montre orè ki sere a",ar:"عرض الجدول المحفوظ"},
+  statusLoading:{es:"Actualizando horario…",en:"Updating schedule…",fr:"Mise à jour de l'horaire…",ht:"Ap mete orè a ajou…",ar:"جارٍ تحديث الجدول…"},
+  modalTitle:{es:"Contacto y emergencias",en:"Contact and emergencies",fr:"Contact et urgences",ht:"Kontak ak ijans",ar:"الاتصال والطوارئ"},
+  modalIntro:{es:"Si estás en peligro inmediato, llama al 911. Para apoyo de Casa Refugiados, usa el contacto de abajo.",en:"If you are in immediate danger, call 911. For support from Casa Refugiados, use the contact below.",fr:"Si tu es en danger immédiat, appelle le 911. Pour l'aide de Casa Refugiados, utilise le contact ci-dessous.",ht:"Si ou an danje kounye a, rele 911. Pou sipò Casa Refugiados, sèvi ak kontak ki anba a.",ar:"إذا كنت في خطر مباشر، اتصل بالرقم 911. للحصول على دعم من Casa Refugiados، استخدم جهة الاتصال أدناه."},
+  emergMx:{es:"Emergencias en México",en:"Emergencies in Mexico",fr:"Urgences au Mexique",ht:"Ijans nan Meksik",ar:"الطوارئ في المكسيك"},
+  casaLabel:{es:"Casa Refugiados",en:"Casa Refugiados",fr:"Casa Refugiados",ht:"Casa Refugiados",ar:"Casa Refugiados"},
+  porConfirmar:{es:"Por confirmar",en:"To confirm",fr:"À confirmer",ht:"Pou konfime",ar:"بانتظار التأكيد"},
+  close:{es:"Cerrar",en:"Close",fr:"Fermer",ht:"Fèmen",ar:"إغلاق"}
+};
+
+const DAYS = [
+  {es:"Lunes",en:"Monday",fr:"Lundi",ht:"Lendi",ar:"الإثنين"},
+  {es:"Martes",en:"Tuesday",fr:"Mardi",ht:"Madi",ar:"الثلاثاء"},
+  {es:"Miércoles",en:"Wednesday",fr:"Mercredi",ht:"Mèkredi",ar:"الأربعاء"},
+  {es:"Jueves",en:"Thursday",fr:"Jeudi",ht:"Jedi",ar:"الخميس"},
+  {es:"Viernes",en:"Friday",fr:"Vendredi",ht:"Vandredi",ar:"الجمعة"},
+  {es:"Sábado",en:"Saturday",fr:"Samedi",ht:"Samdi",ar:"السبت"},
+  {es:"Domingo",en:"Sunday",fr:"Dimanche",ht:"Dimanch",ar:"الأحد"}
+];
+
+const LANGS = [
+  {code:"es",label:"Español",short:"ES"},
+  {code:"en",label:"English",short:"EN"},
+  {code:"fr",label:"Français",short:"FR"},
+  {code:"ht",label:"Kreyòl Ayisyen",short:"HT"},
+  {code:"ar",label:"العربية",short:"AR"}
+];
+
+const CONTENIDO = {
+  secciones:[
+    {
+      id:"orientacion", color:"var(--orientacion)", soft:"var(--orientacion-soft)", icon:"compass",
+      titulo:{es:"Orientación",en:"Guidance",fr:"Orientation",ht:"Oryantasyon",ar:"التوجيه"},
+      desc:{es:"Orientación a las personas solicitantes y refugiadas en México.",en:"Guidance for asylum seekers and refugees in Mexico.",fr:"Orientation pour les demandeurs d'asile et les réfugiés au Mexique.",ht:"Oryantasyon pou moun k ap mande azil ak refijye nan Meksik.",ar:"توجيه لطالبي اللجوء واللاجئين في المكسيك."},
+      intro:{es:"Orientación a las personas solicitantes y refugiadas en México.",en:"Guidance for asylum seekers and refugees in Mexico.",fr:"Orientation pour les demandeurs d'asile et les réfugiés au Mexique.",ht:"Oryantasyon pou moun k ap mande azil ak refijye nan Meksik.",ar:"توجيه لطالبي اللجوء واللاجئين في المكسيك."},
+      esEnlaces:true,
+      enlaces:[
+        { icon:"map", url:{es:"https://help.unhcr.org/mexico/donde-encontrar-ayuda/mapas-de-servicios-2/",en:"https://help.unhcr.org/mexico/en/where-to-seek-help/mapas-de-servicios-2/",fr:"https://help.unhcr.org/mexico/fr/donde-encontrar-ayuda/mapas-de-servicios-2/",ht:"https://help.unhcr.org/mexico/ht/where-to-seek-help/mapas-de-servicios-2/"},
+          titulo:{es:"Mapa de Servicios",en:"Service Map",fr:"Carte des services",ht:"Kat sèvis yo",ar:"خريطة الخدمات"},
+          desc:{es:"Estos mapas muestran la ubicación de los principales servicios de diversas ciudades.",en:"These maps show the location of the main services in several cities.",fr:"Ces cartes montrent l'emplacement des principaux services dans plusieurs villes.",ht:"Kat sa yo montre kote sèvis prensipal yo ye nan plizyè vil.",ar:"تُظهر هذه الخرائط مواقع الخدمات الرئيسية في عدة مدن."} },
+        { icon:"vivienda", url:{es:"https://help.unhcr.org/mexico/donde-encontrar-ayuda/albergues/",en:"https://help.unhcr.org/mexico/en/where-to-seek-help/albergues/",fr:"https://help.unhcr.org/mexico/fr/donde-encontrar-ayuda/albergues/",ht:"https://help.unhcr.org/mexico/ht/where-to-seek-help/albergues/"},
+          titulo:{es:"Albergues",en:"Shelters",fr:"Hébergements",ht:"Kay pou rete",ar:"أماكن الإيواء"},
+          desc:{es:"Lista de albergues y servicios gratuitos a personas en contexto de movilidad.",en:"List of shelters and free services for people on the move.",fr:"Liste des hébergements et services gratuits pour les personnes en situation de mobilité.",ht:"Lis kay pou rete ak sèvis gratis pou moun k ap deplase.",ar:"قائمة بأماكن الإيواء والخدمات المجانية للأشخاص في وضع التنقّل."} },
+        { icon:"doc", url:{es:"https://help.unhcr.org/mexico/como-solicitar-la-condicion-de-refugiado-en-mexico/",en:"https://help.unhcr.org/mexico/en/como-solicitar-la-condicion-de-refugiado-en-mexico/",fr:"https://help.unhcr.org/mexico/fr/como-solicitar-la-condicion-de-refugiado-en-mexico/",ht:"https://help.unhcr.org/mexico/ht/como-solicitar-la-condicion-de-refugiado-en-mexico/"},
+          titulo:{es:"COMAR",en:"COMAR",fr:"COMAR",ht:"COMAR",ar:"COMAR"},
+          desc:{es:"Puedes solicitar protección como refugiado en México ante la COMAR.",en:"You can apply for refugee protection in Mexico through COMAR.",fr:"Tu peux demander une protection en tant que réfugié au Mexique auprès de la COMAR.",ht:"Ou ka mande pwoteksyon kòm refijye nan Meksik nan men COMAR.",ar:"يمكنك طلب الحماية كلاجئ في المكسيك من خلال COMAR."} }
+      ]
+    },
+    {
+      id:"legal", color:"var(--legal)", soft:"var(--legal-soft)", icon:"legal",
+      titulo:{es:"Servicios legales",en:"Legal services",fr:"Services juridiques",ht:"Sèvis legal",ar:"الخدمات القانونية"},
+      desc:{es:"Asesoría y trámites, y cómo solicitarlos",en:"Advice and procedures, and how to request them",fr:"Conseils et démarches, et comment les demander",ht:"Konsèy ak demach, ak kijan pou mande yo",ar:"الاستشارة والإجراءات، وكيفية طلبها"},
+      intro:{es:"Casa Refugiados ofrece orientación legal gratuita para tu proceso de refugio y regularización.",en:"Casa Refugiados offers free legal guidance for your refugee and regularization process.",fr:"Casa Refugiados offre des conseils juridiques gratuits pour ta procédure d'asile et de régularisation.",ht:"Casa Refugiados ofri konsèy legal gratis pou pwosesis refijye ak regilarizasyon ou.",ar:"تقدّم Casa Refugiados إرشادًا قانونيًا مجانيًا لإجراءات اللجوء وتسوية وضعك."},
+      bloques:[{labelKey:"queOfrece",
+        h:{es:"Acompañamiento en tu trámite",en:"Support with your application",fr:"Accompagnement dans ta démarche",ht:"Akonpayman nan demach ou",ar:"مرافقة في إجراءاتك"},
+        p:[{es:"[ POR CONFIRMAR ] Descripción de los servicios legales: asesoría sobre la solicitud de la condición de refugiado (COMAR), apoyo con citas y orientación sobre tus derechos.",en:"[ POR CONFIRMAR ] Description of the legal services: guidance on the refugee status application (COMAR), help with appointments, and information about your rights.",fr:"[ POR CONFIRMAR ] Description des services juridiques : conseils sur la demande de statut de réfugié (COMAR), aide pour les rendez-vous et information sur tes droits.",ht:"[ POR CONFIRMAR ] Deskripsyon sèvis legal yo: konsèy sou demann estati refijye (COMAR), èd pou randevou, ak enfòmasyon sou dwa ou.",ar:"[ POR CONFIRMAR ] وصف الخدمات القانونية: إرشاد بشأن طلب صفة اللاجئ (COMAR)، والمساعدة في المواعيد، ومعلومات عن حقوقك."}]
+      }],
+      pasos:[
+        {es:"[ POR CONFIRMAR ] Acércate a la oficina de Casa Refugiados o pide una cita.",en:"[ POR CONFIRMAR ] Visit the Casa Refugiados office or request an appointment.",fr:"[ POR CONFIRMAR ] Rends-toi au bureau de Casa Refugiados ou demande un rendez-vous.",ht:"[ POR CONFIRMAR ] Ale nan biwo Casa Refugiados oswa mande yon randevou.",ar:"[ POR CONFIRMAR ] توجّه إلى مكتب Casa Refugiados أو اطلب موعدًا."},
+        {es:"[ POR CONFIRMAR ] Presenta los documentos que tengas; no necesitas tenerlos todos para empezar.",en:"[ POR CONFIRMAR ] Bring whatever documents you have; you don't need all of them to start.",fr:"[ POR CONFIRMAR ] Apporte les documents que tu as ; tu n'as pas besoin de tous les avoir pour commencer.",ht:"[ POR CONFIRMAR ] Pote dokiman ou genyen yo; ou pa bezwen gen tout pou kòmanse.",ar:"[ POR CONFIRMAR ] أحضِر ما لديك من وثائق؛ لا تحتاج إلى جميعها للبدء."},
+        {es:"[ POR CONFIRMAR ] Un asesor revisará tu caso y te explicará los siguientes pasos.",en:"[ POR CONFIRMAR ] An advisor will review your case and explain the next steps.",fr:"[ POR CONFIRMAR ] Un conseiller examinera ton dossier et t'expliquera les prochaines étapes.",ht:"[ POR CONFIRMAR ] Yon konseye pral gade dosye ou epi esplike ou pwochen etap yo.",ar:"[ POR CONFIRMAR ] سيراجع مستشار حالتك ويشرح لك الخطوات التالية."}
+      ],
+      contacto:[
+        {k:{es:"Teléfono",en:"Phone",fr:"Téléphone",ht:"Telefòn",ar:"الهاتف"}, v:"55 6164 4818", tel:"+525561644818"},
+        {k:{es:"Correo electrónico",en:"Email",fr:"Courriel",ht:"Imèl",ar:"البريد الإلكتروني"}, v:"contacto@casarefugiados.org", mail:"contacto@casarefugiados.org"},
+        {k:{es:"Dirección",en:"Address",fr:"Adresse",ht:"Adrès",ar:"العنوان"}, v:"Mártires de la Conquista 86, Col. Escandón, Del. Miguel Hidalgo, C.P. 11800, Ciudad de México"},
+        {k:{es:"Horario de atención",en:"Opening hours",fr:"Heures d'ouverture",ht:"Lè ouvèti",ar:"ساعات العمل"}, v:{es:"9:00 a 17:00 h",en:"9:00 – 17:00",fr:"9h00 à 17h00",ht:"9:00 a 17:00",ar:"9:00 – 17:00"}}
+      ]
+    },
+    {
+      id:"vivienda", color:"var(--vivienda)", soft:"var(--vivienda-soft)", icon:"vivienda",
+      titulo:{es:"Vivienda",en:"Housing",fr:"Logement",ht:"Lojman",ar:"السكن"},
+      desc:{es:"Acceso a CEAHPAZ y a un hogar",en:"Access to CEAHPAZ and a home",fr:"Accès au CEAHPAZ et à un foyer",ht:"Aksè a CEAHPAZ ak yon kay",ar:"الوصول إلى CEAHPAZ وإلى بيت"},
+      intro:{es:"Si necesitas un lugar seguro donde quedarte, el CEAHPAZ ofrece una casa temporal.",en:"If you need a safe place to stay, CEAHPAZ offers a temporary home.",fr:"Si tu as besoin d'un endroit sûr où rester, le CEAHPAZ offre une maison temporaire.",ht:"Si ou bezwen yon kote ki an sekirite pou ou rete, CEAHPAZ ofri yon kay tanporè.",ar:"إذا كنت بحاجة إلى مكان آمن للإقامة، يوفّر CEAHPAZ بيتًا مؤقتًا."},
+      bloques:[{labelKey:"queEs",
+        h:{es:"CEAHPAZ — casa temporal",en:"CEAHPAZ — temporary home",fr:"CEAHPAZ — maison temporaire",ht:"CEAHPAZ — yon kay tanporè",ar:"CEAHPAZ — بيت مؤقت"},
+        p:[{es:"El CEAHPAZ es una casa que ofrece alojamiento digno a personas migrantes y refugiadas. Quienes se alojan en la casa tienen acceso a una habitación, alimentación, uso de la cocina y agua caliente limitada.",en:"CEAHPAZ is a home that provides dignified housing to migrants and refugees. Those housed at the home will be given access to a room, board, kitchen access, and limited hot water.",fr:"Le CEAHPAZ est une maison qui offre un logement digne aux personnes migrantes et réfugiées. Les personnes hébergées dans la maison ont accès à une chambre, aux repas, à l'usage de la cuisine et à de l'eau chaude limitée.",ht:"CEAHPAZ se yon kay ki bay lojman diy pou moun migran ak refijye. Moun ki rete nan kay la ap jwenn yon chanm, manje, aksè nan kizin, ak dlo cho an kantite limite.",ar:"CEAHPAZ هو بيت يوفّر سكنًا كريمًا للمهاجرين واللاجئين. يحصل المقيمون في البيت على غرفة، ووجبات، وإمكانية استخدام المطبخ، وكمية محدودة من الماء الساخن."}]
+      }],
+      pasos:[
+        {es:"Ven a nuestra oficina en Mártires de la Conquista 86, Col. Escandón, Del. Miguel Hidalgo, C.P. 11800, Ciudad de México.",en:"Come to our office at Mártires de la Conquista 86, Col. Escandón, Del. Miguel Hidalgo, C.P. 11800, Mexico City.",fr:"Viens à notre bureau au Mártires de la Conquista 86, Col. Escandón, Del. Miguel Hidalgo, C.P. 11800, Mexico.",ht:"Vini nan biwo nou an: Mártires de la Conquista 86, Col. Escandón, Del. Miguel Hidalgo, C.P. 11800, Mexico (Ciudad de México).",ar:"تعال إلى مكتبنا في Mártires de la Conquista 86, Col. Escandón, Del. Miguel Hidalgo, C.P. 11800، مدينة مكسيكو."},
+        {es:"Dile a la recepción que necesitas vivienda.",en:"Tell the front desk that you are in need of housing.",fr:"Indique à l'accueil que tu as besoin d'un logement.",ht:"Di resepsyon an ou bezwen yon kote pou ou rete.",ar:"أخبر موظف الاستقبال بأنك بحاجة إلى سكن."},
+        {es:"Explica tu situación y veremos cómo podemos ayudarte de la mejor manera.",en:"Explain your situation, and we will see how we are able to best assist you.",fr:"Explique ta situation, et nous verrons comment nous pouvons le mieux t'aider.",ht:"Eksplike sitiyasyon ou, epi n ap wè kijan nou ka ede w pi byen.",ar:"اشرح وضعك، وسنرى كيف يمكننا مساعدتك على أفضل وجه."}
+      ],
+      contacto:[
+        {k:{es:"Teléfono",en:"Phone",fr:"Téléphone",ht:"Telefòn",ar:"الهاتف"}, v:"55 6164 4818", tel:"+525561644818"},
+        {k:{es:"Correo electrónico",en:"Email",fr:"Courriel",ht:"Imèl",ar:"البريد الإلكتروني"}, v:"contacto@casarefugiados.org", mail:"contacto@casarefugiados.org"}
+      ]
+    },
+    {
+      id:"comunidad", color:"var(--comunidad)", soft:"var(--comunidad-soft)", icon:"comunidad",
+      titulo:{es:"Comunidad — La Casita",en:"Community — La Casita",fr:"Communauté — La Casita",ht:"Kominote — La Casita",ar:"المجتمع — La Casita"},
+      desc:{es:"Actividades y horarios de la semana",en:"Activities and weekly schedule",fr:"Activités et horaires de la semaine",ht:"Aktivite ak orè semèn nan",ar:"الأنشطة وجدول الأسبوع"},
+      intro:{es:"La Casita es un espacio de encuentro con talleres, actividades y acompañamiento. Aquí está el horario de esta semana.",en:"La Casita is a gathering space with workshops, activities, and support. Here is this week's schedule.",fr:"La Casita est un lieu de rencontre avec des ateliers, des activités et un accompagnement. Voici l'horaire de cette semaine.",ht:"La Casita se yon espas rasanbleman ak atelye, aktivite, ak akonpayman. Men orè semèn sa a.",ar:"La Casita مساحة للقاء تضمّ ورشًا وأنشطة ومرافقة. هذا هو جدول هذا الأسبوع."},
+      esHorario:true,
+      contacto:[
+        {k:{es:"Dirección",en:"Address",fr:"Adresse",ht:"Adrès",ar:"العنوان"}, v:"Col. Roma Sur, Cuauhtémoc, C.P. 06760, Ciudad de México"},
+        {k:{es:"Teléfono",en:"Phone",fr:"Téléphone",ht:"Telefòn",ar:"الهاتف"}, v:"55 6164 4818", tel:"+525561644818"}
+      ]
+    },
+    {
+      id:"salud", color:"var(--salud)", soft:"var(--salud-soft)", icon:"salud",
+      titulo:{es:"Atención médica",en:"Medical care",fr:"Soins médicaux",ht:"Swen medikal",ar:"الرعاية الطبية"},
+      desc:{es:"Cómo recibir atención médica",en:"How to receive medical care",fr:"Comment recevoir des soins médicaux",ht:"Kijan pou resevwa swen medikal",ar:"كيفية الحصول على الرعاية الطبية"},
+      intro:{es:"Casa Refugiados facilita el acceso a atención médica. No necesitas papeles para recibir atención de urgencia.",en:"Casa Refugiados helps you access medical care. You do not need documents to receive emergency care.",fr:"Casa Refugiados facilite l'accès aux soins médicaux. Tu n'as pas besoin de papiers pour recevoir des soins d'urgence.",ht:"Casa Refugiados ede ou jwenn swen medikal. Ou pa bezwen papye pou resevwa swen ijans.",ar:"تسهّل Casa Refugiados الحصول على الرعاية الطبية. لا تحتاج إلى أوراق لتلقّي الرعاية الطارئة."},
+      bloques:[{labelKey:"queOfrece",
+        h:{es:"Acceso a servicios de salud",en:"Access to health services",fr:"Accès aux services de santé",ht:"Aksè a sèvis sante",ar:"الوصول إلى الخدمات الصحية"},
+        p:[{es:"[ POR CONFIRMAR ] Descripción de la atención médica facilitada: consultas, canalización a clínicas y hospitales, atención de salud mental y seguimiento.",en:"[ POR CONFIRMAR ] Description of the medical support provided: consultations, referrals to clinics and hospitals, mental health care, and follow-up.",fr:"[ POR CONFIRMAR ] Description des soins médicaux facilités : consultations, orientation vers des cliniques et hôpitaux, soins de santé mentale et suivi.",ht:"[ POR CONFIRMAR ] Deskripsyon swen medikal yo bay: konsiltasyon, voye nan klinik ak lopital, swen sante mantal, ak swivi.",ar:"[ POR CONFIRMAR ] وصف الرعاية الطبية المُيسَّرة: الاستشارات، والإحالة إلى العيادات والمستشفيات، ورعاية الصحة النفسية، والمتابعة."}]
+      }],
+      pasos:[
+        {es:"[ POR CONFIRMAR ] Comenta tu necesidad de salud al equipo de Casa Refugiados.",en:"[ POR CONFIRMAR ] Tell the Casa Refugiados team about your health need.",fr:"[ POR CONFIRMAR ] Parle de ton besoin de santé à l'équipe de Casa Refugiados.",ht:"[ POR CONFIRMAR ] Pale ak ekip Casa Refugiados sou bezwen sante ou.",ar:"[ POR CONFIRMAR ] أخبر فريق Casa Refugiados باحتياجك الصحي."},
+        {es:"[ POR CONFIRMAR ] Te orientarán sobre la clínica o el servicio adecuado.",en:"[ POR CONFIRMAR ] They will guide you to the right clinic or service.",fr:"[ POR CONFIRMAR ] On t'orientera vers la clinique ou le service approprié.",ht:"[ POR CONFIRMAR ] Y ap dirije ou nan klinik oswa sèvis ki apwopriye a.",ar:"[ POR CONFIRMAR ] سيوجّهونك إلى العيادة أو الخدمة المناسبة."},
+        {es:"[ POR CONFIRMAR ] Recibirás apoyo para llegar a tu cita si lo necesitas.",en:"[ POR CONFIRMAR ] You will get help reaching your appointment if you need it.",fr:"[ POR CONFIRMAR ] Tu recevras de l'aide pour te rendre à ton rendez-vous si nécessaire.",ht:"[ POR CONFIRMAR ] W ap jwenn èd pou rive nan randevou ou si ou bezwen.",ar:"[ POR CONFIRMAR ] ستحصل على مساعدة للوصول إلى موعدك إذا احتجت إليها."}
+      ],
+      contacto:[
+        {k:{es:"Cómo solicitar",en:"How to request",fr:"Comment demander",ht:"Kijan pou mande",ar:"كيفية الطلب"}, v:"[ POR CONFIRMAR ]"},
+        {k:{es:"Urgencias",en:"Emergencies",fr:"Urgences",ht:"Ijans",ar:"الطوارئ"}, v:{es:"Llama al 911",en:"Call 911",fr:"Appelle le 911",ht:"Rele 911",ar:"اتصل بالرقم 911"}, tel:"911"}
+      ]
+    }
+  ],
+  // Horario de respaldo (se usa sin conexión o si el Sheet no está disponible)
+  horarioRespaldo:[
+    {dia:1, items:[{h:"10:00",t:{es:"Clase de español",en:"Spanish class",fr:"Cours d'espagnol",ht:"Klas panyòl",ar:"درس اللغة الإسبانية"},p:{es:"Salón principal",en:"Main hall",fr:"Salle principale",ht:"Sal prensipal",ar:"القاعة الرئيسية"}},{h:"13:00",t:{es:"Taller de empleo",en:"Employment workshop",fr:"Atelier emploi",ht:"Atelye travay",ar:"ورشة عمل للتوظيف"},p:{es:"Sala 2",en:"Room 2",fr:"Salle 2",ht:"Sal 2",ar:"غرفة 2"}}]},
+    {dia:2, items:[{h:"11:00",t:{es:"Apoyo psicosocial",en:"Psychosocial support",fr:"Soutien psychosocial",ht:"Sipò sikososyal",ar:"الدعم النفسي والاجتماعي"},p:{es:"Sala 1",en:"Room 1",fr:"Salle 1",ht:"Sal 1",ar:"غرفة 1"}}]},
+    {dia:3, items:[{h:"10:00",t:{es:"Clase de español",en:"Spanish class",fr:"Cours d'espagnol",ht:"Klas panyòl",ar:"درس اللغة الإسبانية"},p:{es:"Salón principal",en:"Main hall",fr:"Salle principale",ht:"Sal prensipal",ar:"القاعة الرئيسية"}},{h:"16:00",t:{es:"Actividades para niñas y niños",en:"Children's activities",fr:"Activités pour enfants",ht:"Aktivite pou timoun",ar:"أنشطة للأطفال"},p:{es:"Patio",en:"Courtyard",fr:"Cour",ht:"Lakou",ar:"الفناء"}}]},
+    {dia:4, items:[{h:"12:00",t:{es:"Taller de derechos",en:"Know-your-rights workshop",fr:"Atelier sur les droits",ht:"Atelye sou dwa",ar:"ورشة حول الحقوق"},p:{es:"Sala 2",en:"Room 2",fr:"Salle 2",ht:"Sal 2",ar:"غرفة 2"}}]},
+    {dia:5, items:[{h:"10:00",t:{es:"Clase de español",en:"Spanish class",fr:"Cours d'espagnol",ht:"Klas panyòl",ar:"درس اللغة الإسبانية"},p:{es:"Salón principal",en:"Main hall",fr:"Salle principale",ht:"Sal prensipal",ar:"القاعة الرئيسية"}},{h:"17:00",t:{es:"Encuentro comunitario",en:"Community gathering",fr:"Rencontre communautaire",ht:"Rasanbleman kominotè",ar:"لقاء مجتمعي"},p:{es:"Patio",en:"Courtyard",fr:"Cour",ht:"Lakou",ar:"الفناء"}}]},
+    {dia:6, items:[]},
+    {dia:7, items:[]}
+  ]
+};
+
+const ICONS = {
+  legal:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18"/><path d="M7 7h10"/><path d="m5 7-2.5 6a3 3 0 0 0 5 0L5 7z"/><path d="m19 7-2.5 6a3 3 0 0 0 5 0L19 7z"/><path d="M8 21h8"/></svg>',
+  vivienda:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11.5 12 4l9 7.5"/><path d="M5 10v10h14V10"/><path d="M9.5 20v-6h5v6"/></svg>',
+  comunidad:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3"/><path d="M3.5 20a5.5 5.5 0 0 1 11 0"/><circle cx="17" cy="9" r="2.4"/><path d="M15.5 20a4.5 4.5 0 0 1 6.5-4"/></svg>',
+  salud:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 5.6a5.2 5.2 0 0 0-8.8-2.2A5.2 5.2 0 0 0 3.2 5.6c-1.6 3 .4 6 2.8 8.3L12 19l6-5.1c2.4-2.3 4.4-5.3 2.8-8.3z"/></svg>',
+  chev:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" width="20" height="20"><path d="m9 18 6-6-6-6"/></svg>',
+  back:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><path d="m15 18-6-6 6-6"/></svg>',
+  phone:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.81.36 1.6.7 2.34a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.74-1.27a2 2 0 0 1 2.11-.45c.74.34 1.53.57 2.34.7A2 2 0 0 1 22 16.92z"/></svg>',
+  pin:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0z"/><circle cx="12" cy="10" r="3"/></svg>',
+  clock:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
+  info:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><path d="M12 8h.01"/></svg>',
+  shield:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 4 5v6c0 5 3.5 8.5 8 10 4.5-1.5 8-5 8-10V5l-8-3z"/><path d="m9 12 2 2 4-4"/></svg>',
+  compass:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polygon points="15.5 8.5 13 13 8.5 15.5 11 11 15.5 8.5"/></svg>',
+  map:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="m9 4-6 2v14l6-2 6 2 6-2V4l-6 2-6-2z"/><path d="M9 4v14"/><path d="M15 6v14"/></svg>',
+  doc:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 13h6"/><path d="M9 17h5"/></svg>',
+  external:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" width="20" height="20"><path d="M7 17 17 7"/><path d="M8 7h9v9"/></svg>',
+  mail:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7.5 9 6 9-6"/></svg>',
+  chat:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>',
+  send:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4 20-7z"/><path d="M22 2 11 13"/></svg>',
+  close:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>'
+};
+
+/* =====================================================================
+   ASISTENTE (búsqueda en el contenido del sitio — sin IA generativa)
+   Solo muestra información que ya está en la app. No inventa respuestas.
+   ===================================================================== */
+const ASSIST = {
+  title:{es:"Asistente",en:"Assistant",fr:"Assistant",ht:"Asistan",ar:"المساعد"},
+  intro:{es:"Escribe tu pregunta y te mostraré la información del sitio. Para tu caso particular, comunícate con Casa Refugiados.",en:"Type your question and I'll show you information from this site. For your specific case, contact Casa Refugiados.",fr:"Pose ta question et je te montrerai les informations du site. Pour ton cas particulier, contacte Casa Refugiados.",ht:"Ekri kesyon ou epi m ap montre ou enfòmasyon ki nan sit la. Pou ka pa ou, kontakte Casa Refugiados.",ar:"اكتب سؤالك وسأعرض لك المعلومات الموجودة في الموقع. لحالتك الخاصة، تواصل مع Casa Refugiados."},
+  placeholder:{es:"Escribe tu pregunta…",en:"Type your question…",fr:"Écris ta question…",ht:"Ekri kesyon ou…",ar:"اكتب سؤالك…"},
+  found:{es:"Esto puede ayudarte:",en:"This may help:",fr:"Ceci peut t'aider :",ht:"Sa ka ede ou:",ar:"قد يساعدك هذا:"},
+  none:{es:"No encontré información sobre eso en la app. Te recomiendo comunicarte con Casa Refugiados al 55 6164 4818.",en:"I couldn't find information about that in the app. I recommend contacting Casa Refugiados at 55 6164 4818.",fr:"Je n'ai pas trouvé d'information à ce sujet dans l'application. Je te recommande de contacter Casa Refugiados au 55 6164 4818.",ht:"Mwen pa jwenn enfòmasyon sou sa nan aplikasyon an. Mwen rekòmande w kontakte Casa Refugiados nan 55 6164 4818.",ar:"لم أجد معلومات حول ذلك في التطبيق. أنصحك بالتواصل مع Casa Refugiados على الرقم 55 6164 4818."},
+  open:{es:"Abrir",en:"Open",fr:"Ouvrir",ht:"Louvri",ar:"افتح"},
+  sendAria:{es:"Enviar",en:"Send",fr:"Envoyer",ht:"Voye",ar:"إرسال"}
+};
+
+const SUGGEST = [
+  {es:"¿Dónde puedo dormir?",en:"Where can I sleep?",fr:"Où puis-je dormir ?",ht:"Ki kote m ka dòmi?",ar:"أين يمكنني النوم؟"},
+  {es:"¿Cómo solicito refugio?",en:"How do I apply for asylum?",fr:"Comment demander l'asile ?",ht:"Kijan m mande azil?",ar:"كيف أطلب اللجوء؟"},
+  {es:"Necesito un médico",en:"I need a doctor",fr:"J'ai besoin d'un médecin",ht:"Mwen bezwen yon doktè",ar:"أحتاج إلى طبيب"},
+  {es:"¿Qué actividades hay?",en:"What activities are there?",fr:"Quelles activités y a-t-il ?",ht:"Ki aktivite ki genyen?",ar:"ما الأنشطة المتاحة؟"}
+];
+
+/* Palabras clave por sección (en varios idiomas) para encontrar coincidencias */
+const KEYWORDS = {
+  orientacion:["orientacion","guia","guidance","orientation","mapa","map","carte","servicios","services","comar","asilo","asylum","asile","azil","refugio","refugee","refugiado","refije","ayuda","help","aide","albergues","shelter","abri","توجيه","خريطة","خدمات","لجوء","لاجئ","مساعدة"],
+  legal:["legal","abogado","lawyer","avocat","avoka","derecho","derechos","rights","droits","dwa","asesoria","advice","conseil","tramite","tramites","papeles","documentos","documents","papye","dokiman","comar","juridique","قانوني","محامي","حقوق","أوراق","وثائق","استشارة"],
+  vivienda:["vivienda","casa","dormir","sleep","dormi","alojamiento","albergue","shelter","abri","refugio","housing","logement","lojman","ceahpaz","quedarme","hospedaje","cuarto","habitacion","room","chambre","chanm","kay","سكن","مأوى","نوم","إقامة","غرفة","مبيت"],
+  comunidad:["comunidad","community","communaute","kominote","actividades","activities","activites","aktivite","casita","horario","schedule","horaire","ore","clases","clase","class","cours","klas","taller","workshop","atelier","atelye","español","spanish","niños","children","enfants","timoun","evento","مجتمع","أنشطة","جدول","دروس","ورشة","أطفال"],
+  salud:["salud","medico","doctor","health","medical","medecin","sante","swen","doktè","enfermo","sick","malade","malad","clinica","clinic","clinique","hospital","hopital","medicina","medicine","medicament","cita","urgencia","emergencia","emergency","urgence","ijans","mental","صحة","طبيب","مريض","عيادة","مستشفى","دواء","طوارئ","نفسية"]
+};
+
+/* ---------- Estado ---------- */
+let LANG = "es";
+let currentView = "inicio";
+let scheduleData = CONTENIDO.horarioRespaldo.map(d => ({items:d.items}));
+let scheduleStatus = SHEET_CSV_URL ? "loading" : "static";
+
+const view = document.getElementById('view');
+
+/* t(): devuelve el texto en el idioma actual; si falta, usa español */
+function t(val){
+  if(val == null) return "";
+  if(typeof val === "string") return val;
+  return val[LANG] || val.es || Object.values(val)[0] || "";
+}
+function markTodo(text){
+  return String(text).replace(/\[ POR CONFIRMAR \]/g, '<span class="todo">'+t(UI.porConfirmar).toUpperCase()+'</span>');
+}
+
+function contactoBlock(s){
+  if(!s.contacto) return '';
+  let html = `<div class="block"><div class="block-label">${t(UI.contacto)}</div>`;
+  html += s.contacto.map(ct => {
+    const key = t(ct.k).toLowerCase();
+    const ico = ct.mail ? 'mail'
+              : (ct.tel || key.includes('tel')||key.includes('phone')||key.includes('urg')||key.includes('emerg')||key.includes('ijans')) ? 'phone'
+              : (key.includes('dir')||key.includes('adr')) ? 'pin'
+              : (key.includes('hor')||key.includes('hour')||key.includes('heure')||key.includes('ouvèti')||key.includes('lè')) ? 'clock' : 'info';
+    const linkStyle = 'color:var(--brand);text-decoration:none;font-weight:700';
+    const val = ct.tel ? `<a href="tel:${ct.tel}" style="${linkStyle}">${t(ct.v)}</a>`
+              : ct.mail ? `<a href="mailto:${ct.mail}" style="${linkStyle};overflow-wrap:anywhere">${t(ct.v)}</a>`
+              : markTodo(t(ct.v));
+    return `<div class="contact-row"><span class="contact-ico">${ICONS[ico]}</span><span class="contact-meta"><span class="k">${t(ct.k)}</span><span class="v">${val}</span></span></div>`;
+  }).join('');
+  return html + `</div>`;
+}
+
+/* ---------- Vistas ---------- */
+function renderInicio(){
+  currentView = "inicio";
+  const cards = CONTENIDO.secciones.map(s => `
+    <button class="card" onclick="renderSeccion('${s.id}')">
+      <span class="card-bar" style="background:${s.color}"></span>
+      <span class="card-icon" style="background:${s.soft};color:${s.color}">${ICONS[s.icon]}</span>
+      <span class="card-text">
+        <span class="card-title">${t(s.titulo)}</span>
+        <span class="card-desc">${t(s.desc)}</span>
+      </span>
+      <span class="card-chev">${ICONS.chev}</span>
+    </button>`).join('');
+  view.innerHTML = `
+    <img class="home-logo" src="logo-full.png" alt="Casa Refugiados" />
+    <h1 class="greeting">${t(UI.saludo)}</h1>
+    <p class="subgreeting">${t(UI.sub)}</p>
+    <div class="cards">${cards}</div>
+    <div class="privacy">${ICONS.shield}<p>${t(UI.privacy)}</p></div>
+    <p class="footer"><span class="offline-dot">${t(UI.offline)}</span><br><a href="https://www.netlify.com" target="_blank" rel="noopener noreferrer" style="color:inherit;text-decoration:underline">This site is powered by Netlify</a></p>`;
+  window.scrollTo(0,0);
+}
+
+function renderSeccion(id){
+  currentView = id;
+  const s = CONTENIDO.secciones.find(x => x.id === id);
+  let body = `
+    <button class="back" onclick="renderInicio()">${ICONS.back} ${t(UI.home)}</button>
+    <div class="section-head">
+      <span class="section-badge" style="background:${s.soft};color:${s.color}">${ICONS[s.icon]}</span>
+      <h1 class="section-title">${t(s.titulo)}</h1>
+    </div>
+    <p class="section-intro">${t(s.intro)}</p>`;
+
+  if(s.esHorario){
+    if(SHEET_CSV_URL){
+      const cls = scheduleStatus === "live" ? "live" : (scheduleStatus === "loading" ? "loading" : "cached");
+      const lbl = scheduleStatus === "live" ? t(UI.statusLive) : (scheduleStatus === "loading" ? t(UI.statusLoading) : t(UI.statusCached));
+      body += `<div class="sched-status ${cls}"><span class="d"></span>${lbl}</div>`;
+    }
+    body += scheduleData.map((d,i) => `
+      <div class="day">
+        <div class="day-head">${t(DAYS[i])}</div>
+        ${ d.items.length === 0
+          ? `<div class="day-empty">${t(UI.noActivities)}</div>`
+          : d.items.map(it => `
+              <div class="slot">
+                <span class="slot-time">${it.h}</span>
+                <span class="slot-body"><span class="t">${t(it.t)}</span>${t(it.p) ? `<span class="p">${t(it.p)}</span>` : ''}</span>
+              </div>`).join('') }
+      </div>`).join('');
+    body += `<p class="updated-note">${t(UI.scheduleNote)}</p>`;
+    body += contactoBlock(s);
+  } else if(s.esEnlaces){
+    body += `<div class="cards">` + s.enlaces.map(e => `
+      <a class="card" href="${t(e.url)}" target="_blank" rel="noopener noreferrer">
+        <span class="card-bar" style="background:${s.color}"></span>
+        <span class="card-icon" style="background:${s.soft};color:${s.color}">${ICONS[e.icon]}</span>
+        <span class="card-text">
+          <span class="card-title">${t(e.titulo)}</span>
+          <span class="card-desc">${t(e.desc)}</span>
+        </span>
+        <span class="card-chev">${ICONS.external}</span>
+      </a>`).join('') + `</div>`;
+  } else {
+    body += (s.bloques || []).map(b => `
+      <div class="block">
+        ${b.labelKey ? `<div class="block-label">${t(UI[b.labelKey])}</div>` : ''}
+        <h3>${t(b.h)}</h3>
+        ${b.p.map(x => `<p>${markTodo(t(x))}</p>`).join('')}
+      </div>`).join('');
+    if(s.pasos){
+      body += `<div class="block" style="--seccolor:${s.color}">
+        <div class="block-label">${t(UI.comoAcceder)}</div>
+        <ol class="steps">${s.pasos.map(p => `<li><span>${markTodo(t(p))}</span></li>`).join('')}</ol>
+      </div>`;
+    }
+    body += contactoBlock(s);
+  }
+  view.innerHTML = body;
+  window.scrollTo(0,0);
+}
+
+/* ---------- Horario desde Google Sheets ---------- */
+function parseCSV(text){
+  const rows=[]; let row=[], field="", inQ=false, i=0;
+  while(i < text.length){
+    const ch = text[i];
+    if(inQ){
+      if(ch === '"'){ if(text[i+1] === '"'){ field+='"'; i+=2; continue; } inQ=false; i++; continue; }
+      field += ch; i++; continue;
+    } else {
+      if(ch === '"'){ inQ=true; i++; continue; }
+      if(ch === ','){ row.push(field); field=""; i++; continue; }
+      if(ch === '\r'){ i++; continue; }
+      if(ch === '\n'){ row.push(field); rows.push(row); row=[]; field=""; i++; continue; }
+      field += ch; i++; continue;
+    }
+  }
+  if(field.length || row.length){ row.push(field); rows.push(row); }
+  return rows;
+}
+
+function dayIndex(v){
+  const s = String(v||"").trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
+  if(/^[1-7]$/.test(s)) return parseInt(s,10) - 1;
+  const map = {lun:0,mon:0,mar:1,tue:1,mie:2,wed:2,jue:3,thu:3,vie:4,fri:4,sab:5,sat:5,dom:6,sun:6};
+  for(const k in map){ if(s.startsWith(k)) return map[k]; }
+  return -1;
+}
+
+function buildScheduleFromRows(rows){
+  if(!rows || rows.length < 2) return null;
+  const norm = s => String(s||"").trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
+  const header = rows[0].map(norm);
+  const col = name => header.indexOf(name);
+  const cDia=col("dia"), cHora=col("hora"), cEs=col("actividad_es");
+  if(cDia < 0 || cHora < 0 || cEs < 0) return null;
+  const cEn=col("actividad_en"), cFr=col("actividad_fr"), cHt=col("actividad_ht"), cAr=col("actividad_ar"), cLug=col("lugar");
+  const days = Array.from({length:7}, () => ({items:[]}));
+  for(let r=1; r<rows.length; r++){
+    const row = rows[r];
+    const di = dayIndex(row[cDia]);
+    const es = (row[cEs]||"").trim();
+    if(di < 0 || !es) continue;
+    days[di].items.push({
+      h:(row[cHora]||"").trim(),
+      t:{ es, en:(cEn>=0?row[cEn]:"").trim()||es, fr:(cFr>=0?row[cFr]:"").trim()||es, ht:(cHt>=0?row[cHt]:"").trim()||es, ar:(cAr>=0?row[cAr]:"").trim()||es },
+      p:(cLug>=0?row[cLug]:"").trim()
+    });
+  }
+  days.forEach(d => d.items.sort((a,b) => a.h.localeCompare(b.h)));
+  return days;
+}
+
+async function loadSchedule(){
+  if(!SHEET_CSV_URL) return;
+  scheduleStatus = "loading";
+  if(currentView === "comunidad") renderSeccion("comunidad");
+  try{
+    const res = await fetch(SHEET_CSV_URL, {cache:"no-store"});
+    if(!res.ok) throw new Error("fetch failed");
+    const built = buildScheduleFromRows(parseCSV(await res.text()));
+    if(built){ scheduleData = built; scheduleStatus = "live"; }
+    else throw new Error("bad format");
+  } catch(e){
+    scheduleStatus = "cached"; // se queda con el horario de respaldo
+  }
+  if(currentView === "comunidad") renderSeccion("comunidad");
+}
+
+/* ---------- Idioma ---------- */
+function buildLangMenu(){
+  const menu = document.getElementById('langMenu');
+  menu.innerHTML = LANGS.map(l => `
+    <button role="menuitem" data-lang="${l.code}" aria-current="${l.code === LANG}">
+      ${l.label}${l.code === LANG ? '<span class="tick">✓</span>' : ''}
+    </button>`).join('');
+  menu.querySelectorAll('button').forEach(b => {
+    b.addEventListener('click', () => { setLang(b.dataset.lang); closeLangMenu(); });
+  });
+}
+function openLangMenu(){ document.getElementById('langMenu').classList.add('open'); document.getElementById('langBtn').setAttribute('aria-expanded','true'); }
+function closeLangMenu(){ document.getElementById('langMenu').classList.remove('open'); document.getElementById('langBtn').setAttribute('aria-expanded','false'); }
+
+function setLang(code){
+  LANG = code;
+  document.documentElement.lang = code;
+  document.documentElement.dir = (code === "ar") ? "rtl" : "ltr";
+  document.getElementById('langCode').textContent = (LANGS.find(l => l.code === code)||{}).short || "ES";
+  document.getElementById('tagline').textContent = t(UI.tagline);
+  buildLangMenu();
+  renderModal();
+  if(typeof assistRefresh === "function") assistRefresh();
+  if(currentView === "inicio") renderInicio(); else renderSeccion(currentView);
+}
+
+/* ---------- Modal de contacto ---------- */
+function renderModal(){
+  const sheet = document.getElementById('sheet');
+  sheet.innerHTML = `
+    <h3>${t(UI.modalTitle)}</h3>
+    <p>${t(UI.modalIntro)}</p>
+    <a class="call-btn" href="tel:911">
+      <span class="ic" style="background:#C0492F">${ICONS.phone}</span>
+      <span class="lab"><span class="k">${t(UI.emergMx)}</span><span class="v">911</span></span>
+    </a>
+    <a class="call-btn" href="tel:+525561644818">
+      <span class="ic" style="background:var(--brand)">${ICONS.phone}</span>
+      <span class="lab"><span class="k">${t(UI.casaLabel)}</span><span class="v">55 6164 4818</span></span>
+    </a>
+    <button class="sheet-close" id="sheetClose">${t(UI.close)}</button>`;
+  sheet.querySelector('#sheetClose').addEventListener('click', () => document.getElementById('scrim').classList.remove('open'));
+}
+
+/* ---------- Eventos ---------- */
+const scrim = document.getElementById('scrim');
+document.getElementById('helpBtn').addEventListener('click', () => scrim.classList.add('open'));
+scrim.addEventListener('click', e => { if(e.target === scrim) scrim.classList.remove('open'); });
+document.addEventListener('keydown', e => { if(e.key === 'Escape'){ scrim.classList.remove('open'); closeLangMenu(); closeAssist(); } });
+
+document.getElementById('langBtn').addEventListener('click', e => {
+  e.stopPropagation();
+  const open = document.getElementById('langMenu').classList.contains('open');
+  open ? closeLangMenu() : openLangMenu();
+});
+document.addEventListener('click', e => {
+  if(!e.target.closest('#langMenu') && !e.target.closest('#langBtn')) closeLangMenu();
+});
+
+/* ---------- Asistente (búsqueda en el contenido) ---------- */
+let assistMsgs = [];                 // {role:'user'|'bot', text} o {role:'bot', ids:[...]} o {role:'bot', none:true}
+const assistScrim = document.getElementById('assistScrim');
+
+const STOP = new Set(["un","una","uno","el","la","los","las","de","del","que","como","donde","para","por","con","mi","me","puedo","necesito","quiero","tengo","hay","es","en","the","an","need","want","where","can","how","do","my","is","to","of","for","and","or","je","une","le","les","des","ou","comment","pour","avec","mon","ma","ki","kote","mwen","nan","pou","ak","yon","cherche","busco"]);
+
+function normalizeQ(s){
+  return String(s||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
+}
+function tokenize(str){
+  return normalizeQ(str).split(/[^a-z0-9\u0600-\u06ff]+/i).filter(Boolean);
+}
+function termMatch(term, tokenSet){
+  if(tokenSet.has(term)) return true;
+  for(const tok of tokenSet){
+    const short = term.length <= tok.length ? term : tok;
+    const long  = term.length <= tok.length ? tok : term;
+    if(short.length >= 3 && long.length >= 4 && long.includes(short)) return true;
+  }
+  return false;
+}
+function assistSearch(query){
+  const terms = tokenize(query).filter(x => x.length >= 2 && !STOP.has(x));
+  if(!terms.length) return [];
+  const scored = CONTENIDO.secciones.map(s => {
+    const parts = [ t(s.titulo), t(s.desc), t(s.intro), s.titulo.es, s.desc.es, s.intro.es, (KEYWORDS[s.id]||[]).join(" ") ];
+    if(s.enlaces) s.enlaces.forEach(e => { parts.push(t(e.titulo), t(e.desc), e.titulo.es, e.desc.es); });
+    const tokenSet = new Set(tokenize(parts.join(" ")));
+    let score = 0;
+    terms.forEach(term => { if(termMatch(term, tokenSet)) score++; });
+    return { id:s.id, score };
+  }).filter(r => r.score > 0).sort((a,b) => b.score - a.score);
+  return scored.slice(0, 3).map(r => r.id);
+}
+
+function assistSend(text){
+  const q = (text || "").trim();
+  if(!q) return;
+  assistMsgs.push({ role:"user", text:q });
+  const ids = assistSearch(q);
+  if(ids.length) assistMsgs.push({ role:"bot", ids });
+  else assistMsgs.push({ role:"bot", none:true });
+  renderAssistMsgs();
+}
+
+function assistOpen(id){
+  closeAssist();
+  renderSeccion(id);
+}
+
+function renderAssistMsgs(){
+  const box = document.getElementById('assistMsgs');
+  let html = `<div class="msg bot">${t(ASSIST.intro)}</div>`;
+  assistMsgs.forEach(m => {
+    if(m.role === "user"){
+      html += `<div class="msg user">${escapeHtml(m.text)}</div>`;
+    } else if(m.none){
+      html += `<div class="msg bot">${t(ASSIST.none)}</div>`;
+    } else if(m.ids){
+      let inner = `${t(ASSIST.found)}`;
+      m.ids.forEach(id => {
+        const s = CONTENIDO.secciones.find(x => x.id === id);
+        if(!s) return;
+        inner += `<button class="assist-result" onclick="assistOpen('${s.id}')">
+          <span class="ri" style="background:${s.soft};color:${s.color}">${ICONS[s.icon]}</span>
+          <span class="rt">${t(s.titulo)}</span>
+          <span class="ro">${t(ASSIST.open)} →</span>
+        </button>`;
+      });
+      html += `<div class="msg bot">${inner}</div>`;
+    }
+  });
+  box.innerHTML = html;
+  box.scrollTop = box.scrollHeight;
+}
+
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function assistRefresh(){
+  document.getElementById('assistIco').innerHTML = ICONS.chat;
+  document.getElementById('assistTitle').textContent = t(ASSIST.title);
+  document.getElementById('assistClose').innerHTML = ICONS.close;
+  document.getElementById('assistDisc').textContent = t(ASSIST.intro);
+  document.getElementById('assistField').placeholder = t(ASSIST.placeholder);
+  const sendBtn = document.getElementById('assistSend');
+  sendBtn.innerHTML = ICONS.send;
+  sendBtn.setAttribute('aria-label', t(ASSIST.sendAria));
+  const chips = document.getElementById('assistChips');
+  chips.innerHTML = SUGGEST.map((s,i) => `<button class="chip" data-i="${i}">${t(s)}</button>`).join('');
+  chips.querySelectorAll('.chip').forEach(c => {
+    c.addEventListener('click', () => assistSend(t(SUGGEST[+c.dataset.i])));
+  });
+  renderAssistMsgs();
+}
+
+function openAssist(){ assistScrim.classList.add('open'); document.getElementById('assistField').focus(); }
+function closeAssist(){ assistScrim.classList.remove('open'); }
+
+document.getElementById('fab').addEventListener('click', openAssist);
+document.getElementById('assistClose').addEventListener('click', closeAssist);
+assistScrim.addEventListener('click', e => { if(e.target === assistScrim) closeAssist(); });
+document.getElementById('assistSend').addEventListener('click', () => {
+  const f = document.getElementById('assistField');
+  assistSend(f.value); f.value = "";
+});
+document.getElementById('assistField').addEventListener('keydown', e => {
+  if(e.key === "Enter"){ const f = e.target; assistSend(f.value); f.value = ""; }
+});
+
+/* ---------- Arranque ---------- */
+(function init(){
+  const sys = (navigator.language || "es").slice(0,2).toLowerCase();
+  const supported = LANGS.map(l => l.code);
+  setLang(supported.includes(sys) ? sys : "es");
+  renderInicio();
+  loadSchedule();
+})();
+
+/* ---------- Service worker (funcionamiento sin conexión) ---------- */
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  });
+}
+</script>
+</body>
+</html>
